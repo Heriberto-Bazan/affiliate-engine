@@ -32,3 +32,97 @@ model Session {
   refreshToken        String?
   refreshTokenExpires DateTime?
 }
+
+model Shop {
+  id             String   @id @default(cuid())
+  shopDomain     String   @unique
+  subscriptionId String?  
+  cappedAmount   Float?   
+  currency       String   @default("USD")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  affiliates     Affiliate[]
+  referralEvents ReferralEvent[]
+  subscriptions  Subscription[]
+}
+
+model Affiliate {
+  id             String   @id @default(cuid())
+  shopId         String
+  code           String   
+  name           String
+  email          String?
+  commissionRate Float    @default(10.0)
+  deletedAt      DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  shop           Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  referralEvents ReferralEvent[]
+
+  @@unique([shopId, code])
+  @@index([shopId, deletedAt])
+}
+
+model ReferralEvent {
+  id                  String    @id @default(cuid())
+  shopId              String
+  affiliateId         String
+  shopifyOrderId      String
+  orderTotal          Float
+  orderCurrency       String    @default("USD")
+  appCommission       Float
+  affiliateCommission Float
+  status              String    @default("pending")
+  processedAt         DateTime?
+  errorMessage        String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  shop      Shop        @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  affiliate Affiliate   @relation(fields: [affiliateId], references: [id])
+  billingJobs BillingJob[]
+
+  @@unique([shopId, shopifyOrderId])
+  @@index([shopId, status])
+  @@index([shopId, createdAt])
+  @@index([affiliateId])
+}
+
+model BillingJob {
+  id              String    @id @default(cuid())
+  referralEventId String
+  status          String    @default("pending")
+  attempts        Int       @default(0)
+  maxAttempts     Int       @default(5)
+  nextAttemptAt   DateTime  @default(now())
+  lastError       String?
+  lockedAt        DateTime?
+  lockedBy        String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  referralEvent ReferralEvent @relation(fields: [referralEventId], references: [id], onDelete: Cascade)
+
+  @@index([status, nextAttemptAt])
+  @@index([referralEventId])
+}
+
+model Subscription {
+  id                    String   @id @default(cuid())
+  shopId                String
+  shopifySubscriptionId String   @unique
+  cappedAmount          Float
+  currentUsage          Float    @default(0)
+  currency              String   @default("USD")
+  status                String   @default("pending")
+  currentPeriodStart    DateTime?
+  currentPeriodEnd      DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, status])
+}
