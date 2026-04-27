@@ -1,0 +1,15 @@
+{% comment %}
+  Affiliate Ref Capture App Embed Block
+
+  Carga el script que detecta y persiste el código de afiliado
+  desde ?ref= en la URL hacia cart.attributes._ref.
+{% endcomment %}
+
+{% schema %}
+{
+  "name": "Affiliate Ref Capture",
+  "target": "head",
+  "javascript": "affiliate-ref.js",
+  "settings": []
+}
+{% endschema %}

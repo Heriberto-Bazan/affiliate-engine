@@ -5,8 +5,14 @@ import { createReadableStreamFromReadable } from "@react-router/node";
 import { type EntryContext } from "react-router";
 import { isbot } from "isbot";
 import { addDocumentResponseHeaders } from "./shopify.server";
+import { startBillingWorker } from "./worker/start-worker.server";
 
 export const streamTimeout = 5000;
+
+// Arranca el worker de billing al iniciar el server.
+// El singleton interno garantiza que solo se ejecute una vez aunque este
+// archivo se importe múltiples veces durante hot-reload.
+startBillingWorker();
 
 export default async function handleRequest(
   request: Request,
