@@ -97,6 +97,85 @@ Reemplazar `TU_TUNNEL` por la URL del túnel de Cloudflare que muestra `npm run 
 
 ---
 
+## Cómo probar el flujo end-to-end
+
+### A) Crear un afiliado desde la UI
+
+1. En el admin de la app, click en "Afiliados" en el menú lateral.
+2. Click en "Crear afiliado".
+3. Llenar el formulario:
+   - Código: `TIENDASMART`
+   - Nombre: `Tienda Smart`
+   - Comisión: `10`
+4. Guardar.
+
+El afiliado aparece en la tabla.
+
+### B) Simular un evento de venta referida con HMAC
+
+En **otra terminal** (PowerShell), ejecutar el bloque de la sección "Probar el endpoint `/api/track` con HMAC".
+
+Respuesta esperada:
+
+```
+   ok eventId
+   -- -------
+True clxxxxxx...
+```
+
+### C) Probar idempotencia
+
+Ejecutar el mismo comando de B) una segunda vez. Respuesta esperada:
+
+```
+   ok idempotent
+   -- ----------
+True       True
+```
+
+El sistema detecta el duplicado y no procesa el evento dos veces.
+
+### D) Probar que HMAC bloquea peticiones sin firma
+
+Ejecutar el mismo POST pero sin el header `x-pixel-signature`:
+
+```powershell
+Invoke-RestMethod -Uri "https://TU_TUNNEL/api/track" -Method POST -ContentType "application/json" -Body '{"affiliateCode":"TIENDASMART","shopifyOrderId":"TEST-002","orderTotal":100,"orderCurrency":"USD","shopDomain":"TU_TIENDA.myshopify.com"}'
+```
+
+Respuesta esperada:
+
+```
+Invoke-RestMethod : Error en el servidor remoto: (401) No autorizado.
+```
+
+### E) Ver al worker procesar la cola
+
+En la terminal donde corre `npm run dev`, esperar 5-10 segundos después del paso B. Aparecen logs:
+
+```
+[billing-worker] Procesando job ... (intento 1)
+[billing-worker] MOCK Subscription detectada. Simulando UsageRecord OK por $5 USD
+```
+
+### F) Ver el dashboard actualizado
+
+Volver al admin de la app, navegar a la home (Dashboard). Las 3 métricas se actualizan con el evento procesado:
+
+- Total ventas referidas
+- Comisiones generadas para la app (5%)
+- Comisiones a pagar a afiliados
+
+### G) Inspeccionar la BD con Prisma Studio (opcional)
+
+```bash
+npx prisma studio
+```
+
+Abre una GUI en `http://localhost:5555` para inspeccionar todas las tablas (`Affiliate`, `ReferralEvent`, `BillingJob`, `Subscription`, `Shop`).
+
+---
+
 ## Estructura del proyecto
 
 ```
